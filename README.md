@@ -38,9 +38,12 @@ git clone https://github.com/<you>/hunter.git
 cd hunter
 chmod +x install.sh
 ./install.sh
-source ~/.bashrc   # or: source ~/.zshrc
+# Kali default is zsh → use .zshrc (NOT .bashrc in zsh):
+source ~/.zshrc
 hunter -h
 ```
+
+**Shell note:** On **Kali**, the default terminal is **zsh**. If you run `source ~/.bashrc` inside zsh, you get errors (`shopt: command not found`, `complete: command not found`). Use **`source ~/.zshrc`**, open a **new terminal**, or run **`export PATH="$HOME/.local/bin:$PATH"`** once.
 
 **Manual build:**
 
@@ -64,7 +67,7 @@ go build -o hunter.exe ./cmd/hunter
 | 1 | If `apt install golang-go` is **old**, install Go from [go.dev/dl](https://go.dev/dl/) |
 | 2 | `sudo apt update && sudo apt install -y git python3` |
 | 3 | Clone repo → `chmod +x install.sh` → `./install.sh` |
-| 4 | `source ~/.bashrc` → `hunter -h` |
+| 4 | **`source ~/.zshrc`** on Kali (zsh). On pure bash systems: `source ~/.bashrc`. Or open a **new** terminal. |
 
 **System-wide binary (no shell edits):**
 
@@ -152,9 +155,11 @@ git clone https://github.com/<вы>/hunter.git
 cd hunter
 chmod +x install.sh
 ./install.sh
-source ~/.bashrc
+source ~/.zshrc    # Kali: zsh. Если работаете в bash: source ~/.bashrc
 hunter -h
 ```
+
+**Kali / zsh:** не выполняйте **`source ~/.bashrc`** в оболочке zsh — будут ошибки `shopt`, `complete`. Либо **`source ~/.zshrc`**, либо новый терминал, либо разово: **`export PATH="$HOME/.local/bin:$PATH"`**.
 
 Вручную: `go build -o hunter ./cmd/hunter`. Работайте из каталога репозитория или задайте **`-sites`**.
 
@@ -166,7 +171,9 @@ hunter -h
 
 **Не используйте `sudo go build`** — собирайте от обычного пользователя, в системные каталоги копируйте уже готовый бинарник.
 
-Веб: `cd …/hunter && hunter -web -port 8080`
+Веб: `cd …/hunter && hunter -web -port 8080`.
+
+По умолчанию в Kali — **zsh**: после `./install.sh` выполняйте **`source ~/.zshrc`**, не **`source ~/.bashrc`** (иначе ошибки `shopt` / `complete`).
 
 ### Примеры команд
 

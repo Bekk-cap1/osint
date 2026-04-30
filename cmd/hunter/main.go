@@ -9,9 +9,11 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
 	"github.com/user/hunter/internal/generator"
 	"github.com/user/hunter/internal/models"
 	"github.com/user/hunter/internal/scheduler"
@@ -84,7 +86,7 @@ func main() {
 
 	// Web mode
 	if *webMode {
-	color.Cyan("[*] Starting web dashboard on port %d (%d sites in DB)...", *webPort, len(allSites))
+		color.Cyan("[*] Starting web dashboard on port %d (%d sites in DB)...", *webPort, len(allSites))
 		srv := web.NewServer(allSites, *workers, time.Duration(*timeout)*time.Second)
 		if err := srv.Start(*webPort); err != nil {
 			color.Red("[!] Web server error: %v", err)
@@ -149,6 +151,9 @@ func main() {
 	sched := scheduler.New(*workers, time.Duration(*timeout)*time.Second)
 
 	var found []models.Result
+	var termMu sync.Mutex
+	stderrTTY := isatty.IsTerminal(os.Stderr.Fd())
+
 	totalJobs := len(filteredSites) * len(usernames)
 	progressStep := totalJobs / 50
 	if progressStep < 1 {
@@ -162,20 +167,37 @@ func main() {
 			return
 		}
 		pct := 100.0 * float64(done) / float64(tot)
-		fmt.Fprintf(os.Stderr, "\r\x1b[K[*] Progress: %d / %d (%.1f%%)", done, tot, pct)
+		termMu.Lock()
+		defer termMu.Unlock()
+		if stderrTTY {
+			fmt.Fprintf(os.Stderr, "\r\x1b[K[*] Progress: %d / %d (%.1f%%)", done, tot, pct)
+		} else {
+			fmt.Fprintf(os.Stderr, "[*] Progress: %d / %d (%.1f%%)\n", done, tot, pct)
+		}
 	}
 
 	sched.OnResult = func(result models.Result) {
+		termMu.Lock()
+		defer termMu.Unlock()
 		switch result.Status {
 		case models.StatusFound:
 			found = append(found, result)
+			if stderrTTY {
+				fmt.Fprintf(os.Stderr, "\r\x1b[K\n")
+			}
 			fmt.Printf(" %s %s — %s\n", green("[+]"), result.Site, result.URL)
 		case models.StatusError:
 			if *verbose {
+				if stderrTTY {
+					fmt.Fprintf(os.Stderr, "\r\x1b[K\n")
+				}
 				fmt.Printf(" [!] %s — %s\n", result.Site, result.Error)
 			}
 		case models.StatusWAF:
 			if *verbose {
+				if stderrTTY {
+					fmt.Fprintf(os.Stderr, "\r\x1b[K\n")
+				}
 				fmt.Printf(" [W] %s — WAF detected\n", result.Site)
 			}
 		}

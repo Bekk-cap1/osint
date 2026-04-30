@@ -62,5 +62,14 @@ if [[ ! -f "$HOME/.bashrc" && ! -f "$HOME/.zshrc" ]]; then
 fi
 
 echo
-echo "[*] Run: source ~/.bashrc   # or ~/.zshrc, or open a new terminal"
-echo "[*] Then: hunter -h"
+# Kali default shell is zsh — sourcing .bashrc from zsh breaks (shopt, complete, …).
+if [[ "${SHELL:-}" == */zsh ]]; then
+	echo "[*] Your login shell is zsh. Reload config with:"
+	echo "    source ~/.zshrc"
+	echo "[!] Do NOT run: source ~/.bashrc  (use bash first: bash -l)"
+elif [[ "${SHELL:-}" == */bash ]]; then
+	echo "[*] Reload:  source ~/.bashrc"
+else
+	echo "[*] Reload the right rc file for your shell (zsh: ~/.zshrc, bash: ~/.bashrc)"
+fi
+echo "[*] Then: hunter -h   (or: $INSTALL_DIR/hunter -h)"
