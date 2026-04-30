@@ -1,46 +1,57 @@
-# Hunter — OSINT username checker
+# Hunter
 
-[English](#english) · [Русский](#русский)
+**OSINT username checker** — Sherlock-style enumeration in **Go**: many sites, one `data/sites.json`, optional **web UI**, country filter, **email** / **phone** helpers.
+
+| | |
+|---|---|
+| **Language** | English → [below](#english) |
+| **Язык** | Русский → [ниже](#русский) |
+
+**Stack:** Go **1.22+** · optional Python **3** (for `scripts/merge_whatsmyname.py`)
 
 ---
 
 ## English
 
-A **Sherlock-style** username enumeration tool in **Go**: probe many sites from a single `sites.json` database (merged Sherlock-like entries plus **WhatsMyName** data), optional **web dashboard**, filters by country, and generators for **email** (including Gravatar MD5) and **phone** digits.
+### What it does
 
-### Features
-
-- **Large site list** — one JSON map of probe URLs and rules (`data/sites.json`).
-- **CLI** — concurrent checks, progress on stderr, `-sites` for a custom DB, Ctrl+C cancels.
-- **Web UI** — search by username, full name, email, phone; **Stop**, table **sort** and **filter**; live progress over WebSocket.
-- **Generators** — full-name variants; email local-part variants + **MD5 for `Gravatar_*`** entries; normalized **phone** variants for **`Phone_*`** (e.g. WhatsApp-style URLs in the DB).
-- **Country filter** — sites tagged with `countries` (`global`, `uz`, `ru`, etc.).
-- **Merge script** — `scripts/merge_whatsmyname.py` pulls [WhatsMyName](https://github.com/WebBreacher/WhatsMyName) `wmn-data.json` (see license below).
+- Checks a username (and generated variants) against **hundreds/thousands** of site probes defined in **`data/sites.json`**.
+- **CLI:** concurrent requests, progress on stderr, **Ctrl+C** cancels.
+- **Web:** dashboard with search, **Stop**, table sort/filter, WebSocket progress.
+- **Extras:** full-name variants; **email** → local part + **MD5** for Gravatar-style entries; **phone** digits for phone-specific probes.
 
 ### Requirements
 
-- **Go 1.22+**
-- **Python 3** (optional, only for regenerating / merging `sites.json`)
+| Tool | Notes |
+|------|--------|
+| Go | **1.22+** (`go version`) |
+| Python | Optional · WMN merge script |
 
-### Install from GitHub (`git clone` only)
+### Installation (from Git)
 
-If you maintain a fork, set `go.mod` to `module github.com/<you>/hunter` and update imports from the placeholder `github.com/user/hunter` to match.
+Fork maintainers: set `go.mod` to `module github.com/<you>/hunter` and replace imports `github.com/user/hunter` → your module path.
+
+**Recommended (Linux / Kali):** use [`install.sh`](install.sh) — builds, installs to `~/.local/bin`, updates `.bashrc` / `.zshrc` for `PATH` when needed.
 
 ```bash
 git clone https://github.com/<you>/hunter.git
 cd hunter
 chmod +x install.sh
-./install.sh          # build + ~/.local/bin + auto PATH in .bashrc / .zshrc
-source ~/.bashrc      # or ~/.zshrc / new terminal
+./install.sh
+source ~/.bashrc   # or: source ~/.zshrc
 hunter -h
 ```
 
-Manual build instead of the script: `go build -o hunter ./cmd/hunter && ./hunter -h`.
+**Manual build:**
 
-Keep the repo directory: **`data/sites.json`** is loaded from there when you run `hunter` (including from PATH — the app also tries the current working directory). Prefer running scans from the repo dir or pass **`-sites /full/path/to/data/sites.json`**.  
-Optional CI: [`.github/workflows/go.yml`](.github/workflows/go.yml) runs `go build` on push to `main` / `master`.
+```bash
+go build -o hunter ./cmd/hunter
+./hunter -h
+```
 
-**Windows** (native binary, not used on Linux/Kali):
+**`data/sites.json`:** run scans from the repo folder or pass **` -sites /absolute/path/to/data/sites.json`**. CI: [`.github/workflows/go.yml`](.github/workflows/go.yml).
+
+**Windows** (optional):
 
 ```powershell
 go build -o hunter.exe ./cmd/hunter
@@ -48,30 +59,22 @@ go build -o hunter.exe ./cmd/hunter
 
 ### Kali Linux
 
-**Go 1.22+** required (`go version`). If `apt install golang-go` is too old, use [go.dev/dl](https://go.dev/dl/).
+| Step | Action |
+|------|--------|
+| 1 | If `apt install golang-go` is **old**, install Go from [go.dev/dl](https://go.dev/dl/) |
+| 2 | `sudo apt update && sudo apt install -y git python3` |
+| 3 | Clone repo → `chmod +x install.sh` → `./install.sh` |
+| 4 | `source ~/.bashrc` → `hunter -h` |
 
-**Easy PATH (recommended):** [`install.sh`](install.sh) builds Hunter, installs to **`~/.local/bin`**, and appends `export PATH="$HOME/.local/bin:$PATH"` to **`.bashrc` / `.zshrc`** if that line is not already there (so you don’t hunt `$PATH` by hand).
-
-```bash
-sudo apt update
-sudo apt install -y git python3   # python3 optional (merge_whatsmyname.py)
-git clone https://github.com/<you>/hunter.git
-cd hunter
-chmod +x install.sh
-./install.sh
-source ~/.bashrc    # zsh: source ~/.zshrc
-hunter -h
-```
-
-System-wide install (no shell edits; `/usr/local/bin` is usually on PATH):
+**System-wide binary (no shell edits):**
 
 ```bash
 ./install.sh --system
 ```
 
-**Why not `sudo go build`?** You don’t need root to compile. `sudo go build` runs the compiler as root and can mess up permissions on your Go module cache (`~/go/pkg`). Build as yourself, then let the script (or `sudo install -m 755 hunter /usr/local/bin/hunter`) place the binary where root is required.
+**Do not use `sudo go build`.** Build as your user; use `sudo` only to copy the binary (e.g. `install.sh --system` or `sudo install -m 755 hunter /usr/local/bin/hunter`). Root breaks `~/go/pkg` permissions.
 
-Web UI (from repo dir so `data/` resolves, or use `-sites`):
+**Web UI:**
 
 ```bash
 cd /path/to/hunter
@@ -79,107 +82,72 @@ hunter -web -port 8080
 # http://127.0.0.1:8080
 ```
 
-### CLI usage
+### CLI examples
 
-```text
-hunter <username>                   Search by username
-hunter u1 u2                        Multiple usernames
-hunter -u x -e user@mail.com -p 79001234567   Combine nick, email, phone
-hunter -n "First Last"             Variants from full name
-hunter -e user@mail.com             Email → local part + Gravatar MD5
-hunter -p 79991234567               Phone digits (Phone_* sites in DB)
-hunter nick -country uz             Country filter (+ global)
-hunter -web -port 8080             Web dashboard
-```
+| Example | Description |
+|---------|-------------|
+| `hunter alice` | Single username |
+| `hunter u1 u2` | Several usernames |
+| `hunter -u x -e a@b.c -p 79001234567` | Nick + email + phone |
+| `hunter -n "First Last"` | Full-name variants |
+| `hunter -e user@mail.com` | Email + Gravatar MD5 probes |
+| `hunter -p 79991234567` | Phone-style probes |
+| `hunter nick -country uz` | Country filter + `global` |
+| `hunter -web -port 8080` | Web dashboard |
 
-Useful flags: `-sites path` (custom JSON), `-timeout`, `-workers`, `-v`, `-o out.json`, `-csv`, `-version`.
+**Flags:** `-sites`, `-timeout`, `-workers`, `-v`, `-o`, `-csv`, `-version`, `-phone` / `-p`.
 
-### Web dashboard
+### Site database
+
+Entries in **`data/sites.json`**: `url` with `{}` placeholder, `errorType`, optional `urlProbe`, `errorMsg`, `foundSubstring`, `notFoundHTTP`, `expectedHTTP`, POST fields, etc.
+
+Refresh WhatsMyName merge:
 
 ```bash
-hunter -web -port 8080
+python scripts/merge_whatsmyname.py
 ```
 
-Open `http://localhost:8080`. The UI loads site count from `/api/sites`.
+**WhatsMyName** data is **CC BY-SA 4.0** — keep attribution per their license.
 
-### Site database (`data/sites.json`)
-
-- Object keys are site names; values define `url` (use `{}` as username placeholder), `errorType` (`status_code`, `message`, `response_url`), optional `urlProbe`, `errorMsg`, `foundSubstring`, `notFoundHTTP`, `expectedHTTP`, `headers`, `request_payload` / `requestBody`, etc.
-- To **refresh WhatsMyName-derived entries**:
-
-  ```bash
-  python scripts/merge_whatsmyname.py
-  ```
-
-  The script merges into `data/sites.json` with keys prefixed `WMN_`. **WhatsMyName data** is licensed under **CC BY-SA 4.0** — keep attribution as required by that project (see `wmn-data.json` license block).
-
-### Project layout (short)
+### Project layout
 
 ```text
-cmd/hunter/          CLI entrypoint
-internal/checker/    HTTP probes + parsers (e.g. Instagram, Telegram)
-internal/generator/  Username / email / phone variants
-internal/models/     Shared types
-internal/scheduler/  Worker pool + cancellable runs
-internal/sites/      Load & filter sites.json
-internal/web/        HTTP + WebSocket server, embedded static UI
-data/sites.json      Site definitions
-install.sh           Linux/Kali: build + ~/.local/bin + PATH in shell rc
-scripts/             merge_whatsmyname.py, rebuild helpers
+cmd/hunter/       main
+internal/checker  HTTP checks
+internal/generator
+internal/models
+internal/scheduler
+internal/sites
+internal/web      + embedded UI
+data/sites.json
+install.sh
+scripts/
 ```
 
 ### Disclaimer
 
-Use only on targets you are allowed to test. This tool automates **public** footprint checks; comply with local laws and site terms.
+Use only where allowed. Respect laws and site policies.
 
 ---
 
 ## Русский
 
-**Hunter** — утилита на **Go** в духе **Sherlock**: массовая проверка никнейма по базе сайтов в **`sites.json`** (в том числе после слияния с **WhatsMyName**), опционально **веб-панель**, фильтр по **стране**, генерация вариантов из **email** (в т.ч. MD5 для Gravatar) и **телефона** (цифры).
+### Описание
 
-### Возможности
-
-- **Большая база** — один JSON с шаблонами URL и правилами «найден / не найден».
-- **CLI** — параллельные запросы, прогресс в stderr, свой путь к базе **`-sites`**, остановка по **Ctrl+C**.
-- **Веб** — поля ник, ФИО, email, телефон; кнопка **Stop**, **сортировка** и **фильтр** таблицы, прогресс по WebSocket.
-- **Генераторы** — варианты из ФИО; из email (локальная часть + **MD5 для записей `Gravatar_*`**); нормализация **телефона** для записей **`Phone_*`**.
-- **Фильтр страны** — теги `countries` в каждой записи (`global`, `uz`, …).
-- **Скрипт слияния** — `scripts/merge_whatsmyname.py` подтягивает актуальный **`wmn-data.json`** из репозитория WhatsMyName.
+Проверка ника по большой базе **`data/sites.json`** (Sherlock-подобные правила + слияние с **WhatsMyName**), **веб-интерфейс**, фильтр **страны**, генерация из **email** и **телефона**.
 
 ### Требования
 
-- **Go 1.22+**
-- **Python 3** (по желанию — для обновления `sites.json`)
+| | |
+|---|---|
+| Go | **1.22+** |
+| Python | По желанию (скрипты WMN) |
 
-### Установка: только `git clone`
+### Установка
 
-Если свой форк — пропишите в `go.mod` путь `module github.com/<вы>/hunter` и замените импорты с плейсхолдера `github.com/user/hunter`.
-
-```bash
-git clone https://github.com/<вы>/hunter.git
-cd hunter
-chmod +x install.sh
-./install.sh
-source ~/.bashrc   # или ~/.zshrc / новый терминал
-hunter -h
-```
-
-Вручную: `go build -o hunter ./cmd/hunter`. Каталог репозитория нужен для **`data/sites.json`** (или **`-sites`**). CI: [`.github/workflows/go.yml`](.github/workflows/go.yml).
-
-**Windows** — `hunter.exe` (на Kali не используется):
-
-```powershell
-go build -o hunter.exe ./cmd/hunter
-```
-
-### Kali Linux
-
-Рекомендуется **[`install.sh`](install.sh)**: сборка, копия в **`~/.local/bin`**, при необходимости дописывается **`export PATH="$HOME/.local/bin:$PATH"`** в **`.bashrc`** и **`.zshrc`** (если такой строки ещё нет).
+Свой форк: в **`go.mod`** укажите `module github.com/<вы>/hunter`, замените импорты с `github.com/user/hunter`.
 
 ```bash
-sudo apt update
-sudo apt install -y git python3
 git clone https://github.com/<вы>/hunter.git
 cd hunter
 chmod +x install.sh
@@ -188,53 +156,41 @@ source ~/.bashrc
 hunter -h
 ```
 
-В систему без правки rc: **`./install.sh --system`** → `/usr/local/bin/hunter`.
+Вручную: `go build -o hunter ./cmd/hunter`. Работайте из каталога репозитория или задайте **`-sites`**.
 
-**Зачем не `sudo go build`:** компиляция не требует root. Сборка под `sudo` может испортить права на кэш модулей Go (`~/go/pkg`). Собирайте обычным пользователем: `go build -o hunter ./cmd/hunter`, а в системные каталоги кладите уже готовый файл (`./install.sh --system` или `sudo install -m 755 hunter /usr/local/bin/hunter`).
+**Windows:** `go build -o hunter.exe ./cmd/hunter`
 
-Веб из каталога репозитория: `cd …/hunter && hunter -web -port 8080`.
+### Kali Linux
 
-### Примеры CLI
+Если Go из `apt` старый — [go.dev/dl](https://go.dev/dl/). Далее то же: **`./install.sh`** или **`./install.sh --system`**.
 
-```text
-hunter nick                         Только ник
-hunter u1 u2                        Несколько ников
-hunter -u x -e a@b.c -p 79001234567  Нормальное сочетание флагов
-hunter -n "Иван Иванов"             Варианты из ФИО
-hunter -e user@mail.com             Email + MD5 под Gravatar
-hunter -p 79991234567             Телефон (цифры; смотри Phone_* в базе)
-hunter nick -country uz            Страна + global
-hunter -web -port 8080            Веб-интерфейс
-```
+**Не используйте `sudo go build`** — собирайте от обычного пользователя, в системные каталоги копируйте уже готовый бинарник.
 
-Полезные флаги: **`-sites`**, **`-timeout`**, **`-workers`**, **`-v`**, **`-o`**, **`-csv`**, **`-version`**. Короткий алиас телефона: **`-p`** (= **`-phone`**).
+Веб: `cd …/hunter && hunter -web -port 8080`
 
-### Веб-панель
+### Примеры команд
 
-```bash
-hunter -web -port 8080
-```
+| Команда | Назначение |
+|---------|------------|
+| `hunter nick` | Один ник |
+| `hunter u1 u2` | Несколько ников |
+| `hunter -u x -e a@b -p 7900…` | Ник + email + телефон |
+| `hunter -n "Иван Иванов"` | Варианты из ФИО |
+| `hunter -e user@mail.com` | Email + MD5 (Gravatar) |
+| `hunter -p 79991234567` | Телефон |
+| `hunter nick -country uz` | Страна |
+| `hunter -web -port 8080` | Веб-панель |
 
-В браузере: `http://localhost:8080`.
+Флаги: **`-sites`**, **`-timeout`**, **`-workers`**, **`-v`**, **`-o`**, **`-csv`**, **`-p`** / **`-phone`**.
 
 ### База `data/sites.json`
 
-- В **`url`** плейсхолдер ника — **`{}`**. Типы ошибок: **`status_code`**, **`message`**, **`response_url`**; для стиля WhatsMyName — **`foundSubstring`**, **`notFoundHTTP`**, **`expectedHTTP`**, **`errorMsg`**, POST через **`request_payload`** или **`request_body`**.
-- Обновить блоки WMN:
-
-  ```bash
-  python scripts/merge_whatsmyname.py
-  ```
-
-Ключи WMN имеют префикс **`WMN_`**. Данные WhatsMyName распространяются по **CC BY-SA 4.0** — сохраняйте атрибуцию согласно их лицензии (см. файл `wmn-data.json`).
+Плейсхолдер ника — **`{}`**. Обновление WMN: `python scripts/merge_whatsmyname.py`. Лицензия WMN: **CC BY-SA 4.0**.
 
 ### Важно
 
-Используйте только в законных и этичных сценариях (свои аккаунты, явное разрешение, рамки политики сайтов и закона).
+Только законное и этичное использование.
 
 ---
 
-*Для работы через GitHub замените в проекте модуль и импорты с плейсхолдера `github.com/user/hunter` на свой `github.com/<вы>/hunter`.*
-#   o s i n t 
- 
- 
+*Замените в репозитории `github.com/user/hunter` на свой модуль, если публикуете форк.*
