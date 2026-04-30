@@ -69,6 +69,8 @@ System-wide install (no shell edits; `/usr/local/bin` is usually on PATH):
 ./install.sh --system
 ```
 
+**Why not `sudo go build`?** You don’t need root to compile. `sudo go build` runs the compiler as root and can mess up permissions on your Go module cache (`~/go/pkg`). Build as yourself, then let the script (or `sudo install -m 755 hunter /usr/local/bin/hunter`) place the binary where root is required.
+
 Web UI (from repo dir so `data/` resolves, or use `-sites`):
 
 ```bash
@@ -187,6 +189,8 @@ hunter -h
 ```
 
 В систему без правки rc: **`./install.sh --system`** → `/usr/local/bin/hunter`.
+
+**Зачем не `sudo go build`:** компиляция не требует root. Сборка под `sudo` может испортить права на кэш модулей Go (`~/go/pkg`). Собирайте обычным пользователем: `go build -o hunter ./cmd/hunter`, а в системные каталоги кладите уже готовый файл (`./install.sh --system` или `sudo install -m 755 hunter /usr/local/bin/hunter`).
 
 Веб из каталога репозитория: `cd …/hunter && hunter -web -port 8080`.
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Install Hunter on Kali / Debian / Linux: build, copy to PATH dir, append shell rc if needed.
+# Run this script as your normal user — do not use "sudo go build" (can break ~/go cache permissions).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
