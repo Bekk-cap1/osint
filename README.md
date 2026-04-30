@@ -29,11 +29,15 @@ If you maintain a fork, set `go.mod` to `module github.com/<you>/hunter` and upd
 ```bash
 git clone https://github.com/<you>/hunter.git
 cd hunter
-go build -o hunter ./cmd/hunter
-./hunter -h
+chmod +x install.sh
+./install.sh          # build + ~/.local/bin + auto PATH in .bashrc / .zshrc
+source ~/.bashrc      # or ~/.zshrc / new terminal
+hunter -h
 ```
 
-Keep the repo directory: **`data/sites.json`** is loaded from there (or use `-sites` with another path).  
+Manual build instead of the script: `go build -o hunter ./cmd/hunter && ./hunter -h`.
+
+Keep the repo directory: **`data/sites.json`** is loaded from there when you run `hunter` (including from PATH — the app also tries the current working directory). Prefer running scans from the repo dir or pass **`-sites /full/path/to/data/sites.json`**.  
 Optional CI: [`.github/workflows/go.yml`](.github/workflows/go.yml) runs `go build` on push to `main` / `master`.
 
 **Windows** (native binary, not used on Linux/Kali):
@@ -44,28 +48,32 @@ go build -o hunter.exe ./cmd/hunter
 
 ### Kali Linux
 
-Same flow: **clone, then build a Linux binary** (`hunter`, not `.exe`). You need **Go 1.22+** — check `go version`; if `apt install golang-go` is too old, use a toolchain from [go.dev/dl](https://go.dev/dl/).
+**Go 1.22+** required (`go version`). If `apt install golang-go` is too old, use [go.dev/dl](https://go.dev/dl/).
+
+**Easy PATH (recommended):** [`install.sh`](install.sh) builds Hunter, installs to **`~/.local/bin`**, and appends `export PATH="$HOME/.local/bin:$PATH"` to **`.bashrc` / `.zshrc`** if that line is not already there (so you don’t hunt `$PATH` by hand).
 
 ```bash
 sudo apt update
 sudo apt install -y git python3   # python3 optional (merge_whatsmyname.py)
-# install Go 1.22+ if needed (see go.dev/dl)
 git clone https://github.com/<you>/hunter.git
 cd hunter
-go build -o hunter ./cmd/hunter
-./hunter -h
+chmod +x install.sh
+./install.sh
+source ~/.bashrc    # zsh: source ~/.zshrc
+hunter -h
 ```
 
-Install on `PATH` (optional):
+System-wide install (no shell edits; `/usr/local/bin` is usually on PATH):
 
 ```bash
-sudo install -m 755 hunter /usr/local/bin/hunter
+./install.sh --system
 ```
 
-Web UI:
+Web UI (from repo dir so `data/` resolves, or use `-sites`):
 
 ```bash
-./hunter -web -port 8080
+cd /path/to/hunter
+hunter -web -port 8080
 # http://127.0.0.1:8080
 ```
 
@@ -114,6 +122,7 @@ internal/scheduler/  Worker pool + cancellable runs
 internal/sites/      Load & filter sites.json
 internal/web/        HTTP + WebSocket server, embedded static UI
 data/sites.json      Site definitions
+install.sh           Linux/Kali: build + ~/.local/bin + PATH in shell rc
 scripts/             merge_whatsmyname.py, rebuild helpers
 ```
 
@@ -148,13 +157,15 @@ Use only on targets you are allowed to test. This tool automates **public** foot
 ```bash
 git clone https://github.com/<вы>/hunter.git
 cd hunter
-go build -o hunter ./cmd/hunter
-./hunter -h
+chmod +x install.sh
+./install.sh
+source ~/.bashrc   # или ~/.zshrc / новый терминал
+hunter -h
 ```
 
-Работайте из каталога репозитория, чтобы находился **`data/sites.json`** (или укажите **`-sites`**). CI: [`.github/workflows/go.yml`](.github/workflows/go.yml).
+Вручную: `go build -o hunter ./cmd/hunter`. Каталог репозитория нужен для **`data/sites.json`** (или **`-sites`**). CI: [`.github/workflows/go.yml`](.github/workflows/go.yml).
 
-**Windows** — отдельно, бинарник `hunter.exe` (на Kali/Linux не нужен):
+**Windows** — `hunter.exe` (на Kali не используется):
 
 ```powershell
 go build -o hunter.exe ./cmd/hunter
@@ -162,18 +173,22 @@ go build -o hunter.exe ./cmd/hunter
 
 ### Kali Linux
 
-На Kali собирается обычный **`hunter`** (Linux), не `.exe`. Нужен **Go 1.22+** (`go version`); при старом `golang-go` из apt — ставьте Go с [go.dev/dl](https://go.dev/dl/).
+Рекомендуется **[`install.sh`](install.sh)**: сборка, копия в **`~/.local/bin`**, при необходимости дописывается **`export PATH="$HOME/.local/bin:$PATH"`** в **`.bashrc`** и **`.zshrc`** (если такой строки ещё нет).
 
 ```bash
 sudo apt update
 sudo apt install -y git python3
 git clone https://github.com/<вы>/hunter.git
 cd hunter
-go build -o hunter ./cmd/hunter
-./hunter -h
+chmod +x install.sh
+./install.sh
+source ~/.bashrc
+hunter -h
 ```
 
-В `PATH`, опционально: `sudo install -m 755 hunter /usr/local/bin/hunter`. Веб: `./hunter -web -port 8080` → `http://127.0.0.1:8080`.
+В систему без правки rc: **`./install.sh --system`** → `/usr/local/bin/hunter`.
+
+Веб из каталога репозитория: `cd …/hunter && hunter -web -port 8080`.
 
 ### Примеры CLI
 
@@ -216,5 +231,6 @@ hunter -web -port 8080
 ---
 
 *Для работы через GitHub замените в проекте модуль и импорты с плейсхолдера `github.com/user/hunter` на свой `github.com/<вы>/hunter`.*
-#   o s i n t  
+#   o s i n t 
+ 
  

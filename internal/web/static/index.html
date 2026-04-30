@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hunter — OSINT Username Search</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            background: #0a0e17;
+            color: #e0e6ed;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0 30px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: #6b7b8f;
+            font-size: 1rem;
+        }
+
+        .search-panel {
+            background: #131a2b;
+            border: 1px solid #1e2a3a;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            align-items: end;
+        }
+
+        .input-row-2 {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: end;
+            margin-top: 14px;
+        }
+
+        .filter-grow {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 0.8rem;
+            color: #6b7b8f;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-group input, .input-group select {
+            background: #0a0e17;
+            border: 1px solid #1e2a3a;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #e0e6ed;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            border-color: #00d4ff;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-export {
+            background: #1e2a3a;
+            color: #6b7b8f;
+        }
+
+        .btn-export:hover {
+            background: #253344;
+            color: #e0e6ed;
+        }
+
+        .btn-danger {
+            background: #3d1f28;
+            color: #ff8a80;
+            border: 1px solid #5c2a32;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #5c2830;
+            color: #ffccc7;
+        }
+
+        .btn-danger:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .results-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .results-table th.sortable:hover {
+            color: #00d4ff;
+        }
+
+        th .sort-ind {
+            opacity: 0.5;
+            font-size: 0.7rem;
+            margin-left: 4px;
+        }
+
+        .progress-bar {
+            margin: 16px 0;
+            display: none;
+        }
+
+        .progress-bar.active {
+            display: block;
+        }
+
+        .progress-track {
+            background: #1e2a3a;
+            border-radius: 6px;
+            height: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #7b2ff7);
+            border-radius: 6px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 0.8rem;
+            color: #6b7b8f;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: #131a2b;
+            border: 1px solid #1e2a3a;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        .stat-card .label {
+            font-size: 0.75rem;
+            color: #6b7b8f;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        .results-table {
+            background: #131a2b;
+            border: 1px solid #1e2a3a;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .results-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .results-table th {
+            background: #0a0e17;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 0.8rem;
+            color: #6b7b8f;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .results-table td {
+            padding: 10px 16px;
+            border-top: 1px solid #1e2a3a;
+            font-size: 0.9rem;
+        }
+
+        .results-table tr:hover td {
+            background: #1a2235;
+        }
+
+        .status-found {
+            color: #00e676;
+            font-weight: 600;
+        }
+
+        .link {
+            color: #00d4ff;
+            text-decoration: none;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7b8f;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            background: #1e2a3a;
+            color: #6b7b8f;
+        }
+
+        @media (max-width: 1100px) {
+            .input-row { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 768px) {
+            .input-row { grid-template-columns: 1fr; }
+            .stats { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>HUNTER</h1>
+            <p>OSINT Username Search — <span id="sitesBlurb">many</span> sites</p>
+        </header>
+
+        <div class="search-panel">
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Username</label>
+                    <input type="text" id="username" placeholder="john_doe">
+                </div>
+                <div class="input-group">
+                    <label>Full Name</label>
+                    <input type="text" id="fullname" placeholder="John Doe">
+                </div>
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="text" id="email" placeholder="user@mail.com">
+                </div>
+                <div class="input-group">
+                    <label>Phone</label>
+                    <input type="text" id="phone" placeholder="+1 234 567 8900">
+                </div>
+                <div class="input-group">
+                    <label>Country</label>
+                    <select id="country">
+                        <option value="all">All (no filter)</option>
+                        <option value="uz">Uzbekistan</option>
+                        <option value="ru">Russia / CIS</option>
+                        <option value="cn">China</option>
+                        <option value="us">United States</option>
+                        <option value="eu">Europe</option>
+                        <option value="tr">Turkey</option>
+                        <option value="kr">South Korea</option>
+                        <option value="jp">Japan</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>&nbsp;</label>
+                    <span style="font-size:0.75rem;color:#6b7b8f">Комбинируйте поля</span>
+                </div>
+            </div>
+            <div class="input-row-2">
+                <button class="btn btn-primary" id="startBtn" onclick="startScan()">Search</button>
+                <button class="btn btn-danger" id="stopBtn" onclick="stopScan()" disabled>Stop</button>
+                <button class="btn btn-export" onclick="exportResults()">Export</button>
+                <div class="input-group filter-grow">
+                    <label>Filter results</label>
+                    <input type="text" id="filterInput" placeholder="Filter by site, URL, username…" oninput="renderTable()">
+                </div>
+            </div>
+
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="progressText">0 / 0</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="value" id="statTotal">0</div>
+                <div class="label">Total Checked</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="statFound">0</div>
+                <div class="label">Accounts Found</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="statSites">0</div>
+                <div class="label">Sites in DB</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="statTime">0s</div>
+                <div class="label">Elapsed</div>
+            </div>
+        </div>
+
+        <div class="results-table" id="resultsContainer">
+            <div class="empty-state" id="emptyState">
+                Enter a username or full name and click Search to begin
+            </div>
+            <table id="resultsTable" style="display:none">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-col="site" onclick="toggleSort('site')">Site<span class="sort-ind" id="si-site"></span></th>
+                        <th class="sortable" data-col="url" onclick="toggleSort('url')">URL<span class="sort-ind" id="si-url"></span></th>
+                        <th class="sortable" data-col="username" onclick="toggleSort('username')">Username<span class="sort-ind" id="si-username"></span></th>
+                        <th class="sortable" data-col="time" onclick="toggleSort('time')">Time<span class="sort-ind" id="si-time"></span></th>
+                        <th class="sortable" data-col="category" onclick="toggleSort('category')">Category<span class="sort-ind" id="si-category"></span></th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let results = [];
+        let startTime = null;
+        let timerInterval = null;
+        let scanning = false;
+        let sortCol = 'site';
+        let sortDir = 1;
+        let sitesInDB = 0;
+        let pendingScan = null;
+
+        function connectWS() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+            ws.onopen = () => {
+                if (pendingScan) {
+                    ws.send(pendingScan);
+                    pendingScan = null;
+                }
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                handleMessage(msg);
+            };
+
+            ws.onclose = () => {
+                setTimeout(connectWS, 2000);
+            };
+        }
+
+        fetch('/api/sites').then(r => r.json()).then(d => {
+            const n = d.total || 0;
+            sitesInDB = n;
+            document.getElementById('sitesBlurb').textContent = n ? `${n}+` : 'many';
+            document.getElementById('statSites').textContent = n;
+        }).catch(() => {});
+
+        function cmp(a, b, col) {
+            let va, vb;
+            if (col === 'time') {
+                va = a.responseTime != null ? a.responseTime : -1;
+                vb = b.responseTime != null ? b.responseTime : -1;
+                return va === vb ? 0 : (va < vb ? -1 : 1);
+            }
+            va = String(a[col] || '').toLowerCase();
+            vb = String(b[col] || '').toLowerCase();
+            return va.localeCompare(vb);
+        }
+
+        function toggleSort(col) {
+            if (sortCol === col) sortDir *= -1;
+            else {
+                sortCol = col;
+                sortDir = 1;
+            }
+            ['site','url','username','time','category'].forEach(c => {
+                const el = document.getElementById('si-' + c);
+                if (!el) return;
+                el.textContent = (c === sortCol) ? (sortDir > 0 ? '▲' : '▼') : '';
+            });
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('resultsBody');
+            const q = document.getElementById('filterInput').value.trim().toLowerCase();
+            let rows = results.filter(r => {
+                if (!q) return true;
+                const hay = (r.site + ' ' + r.url + ' ' + r.username + ' ' + (r.category || '')).toLowerCase();
+                return hay.includes(q);
+            });
+            rows = rows.slice().sort((a, b) => sortDir * cmp(a, b, sortCol));
+            tbody.innerHTML = '';
+            rows.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${escapeHtml(r.site)}</strong></td>
+                    <td><a class="link" href="${escapeAttr(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.url)}</a></td>
+                    <td>${escapeHtml(r.username)}</td>
+                    <td>${r.responseTime != null ? r.responseTime.toFixed(2) + 's' : '-'}</td>
+                    <td><span class="tag">${escapeHtml(r.category || '-')}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+        function escapeAttr(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+        }
+
+        function startScan() {
+            const username = document.getElementById('username').value.trim();
+            const fullname = document.getElementById('fullname').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const country = document.getElementById('country').value;
+
+            if (!username && !fullname && !email && !phone) {
+                alert('Enter username, name, email, or phone');
+                return;
+            }
+
+            results = [];
+            renderTable();
+            document.getElementById('resultsTable').style.display = 'table';
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('progressBar').classList.add('active');
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('statFound').textContent = '0';
+            document.getElementById('statTotal').textContent = '0';
+            scanning = true;
+
+            startTime = Date.now();
+            timerInterval = setInterval(updateTimer, 100);
+
+            const req = {
+                usernames: username ? [username] : [],
+                fullName: fullname,
+                email: email,
+                phone: phone,
+                country: country,
+                timeout: 30
+            };
+
+            const raw = JSON.stringify(req);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(raw);
+            } else if (ws && ws.readyState === WebSocket.CONNECTING) {
+                pendingScan = raw;
+            } else {
+                alert('Нет соединения с сервером. Обновите страницу и попробуйте снова.');
+                scanFinished();
+                document.getElementById('progressBar').classList.remove('active');
+            }
+        }
+
+        function stopScan() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ op: 'stop' }));
+            }
+        }
+
+        function scanFinished() {
+            scanning = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            clearInterval(timerInterval);
+        }
+
+        function handleMessage(msg) {
+            switch (msg.type) {
+                case 'start':
+                    {
+                        const t = msg.payload.total | 0;
+                        document.getElementById('statSites').textContent = sitesInDB || msg.payload.sites;
+                        document.getElementById('progressText').textContent = `0 / ${t}`;
+                        document.getElementById('progressPercent').textContent = t ? '0%' : '—';
+                        document.getElementById('progressFill').style.width = '0%';
+                        document.getElementById('statTotal').textContent = '0';
+                    }
+                    break;
+
+                case 'found':
+                    const r = msg.payload;
+                    results.push(r);
+                    document.getElementById('statFound').textContent = results.length;
+                    renderTable();
+                    break;
+
+                case 'progress':
+                    const p = msg.payload;
+                    const pct = p.total ? Math.round((p.completed / p.total) * 100) : 0;
+                    document.getElementById('progressFill').style.width = pct + '%';
+                    document.getElementById('progressText').textContent = `${p.completed} / ${p.total}`;
+                    document.getElementById('progressPercent').textContent = pct + '%';
+                    document.getElementById('statTotal').textContent = p.completed;
+                    break;
+
+                case 'done':
+                    {
+                        const t = msg.payload.total | 0;
+                        document.getElementById('progressFill').style.width = '100%';
+                        document.getElementById('progressText').textContent = `${t} / ${t}`;
+                        document.getElementById('progressPercent').textContent = '100%';
+                        document.getElementById('statTotal').textContent = String(t);
+                    }
+                    scanFinished();
+                    break;
+
+                case 'stopped':
+                    {
+                        const p = msg.payload;
+                        const ch = p.checked | 0;
+                        const tot = p.total | 0;
+                        const pct = tot ? Math.round((ch / tot) * 100) : 0;
+                        document.getElementById('progressFill').style.width = pct + '%';
+                        document.getElementById('progressText').textContent = `${ch} / ${tot}`;
+                        document.getElementById('progressPercent').textContent = 'остановлено';
+                        document.getElementById('statTotal').textContent = String(ch);
+                    }
+                    scanFinished();
+                    break;
+
+                case 'error':
+                    alert(msg.payload.message);
+                    scanFinished();
+                    document.getElementById('progressBar').classList.remove('active');
+                    break;
+            }
+        }
+
+        function updateTimer() {
+            if (startTime && scanning) {
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                document.getElementById('statTime').textContent = elapsed + 's';
+            }
+        }
+
+        function exportResults() {
+            if (results.length === 0) return;
+            const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'hunter_results.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        connectWS();
+    </script>
+</body>
+</html>
