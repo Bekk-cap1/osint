@@ -50,6 +50,7 @@ func main() {
   ╩ ╩╚═╝╝╚╝ ╩ ╚═╝╩╚═  v%s
 
   OSINT Username Hunter — Sherlock-style + большой sites.json (WMN и др.). Свой файл: -sites path.
+  Автор: @bekk_cap1 
 
 `, version)
 		fmt.Fprintf(os.Stderr, "Usage:\n")
